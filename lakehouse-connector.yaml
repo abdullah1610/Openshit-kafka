@@ -1,0 +1,24 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnect
+metadata:
+  name: lakehouse-connector
+  namespace: lakehouse-ingest
+  annotations:
+    strimzi.io/use-connector-resources: "true"
+spec:
+  version: 4.1.1
+  replicas: 1
+  bootstrapServers: my-cluster-kafka-bootstrap.lakehouse-ingest.svc.cluster.local:9092
+  image: docker.io/shaikhabdullah1610/openshit_poc:v6
+  groupId: connect-cluster
+  configStorageTopic: connect-configs
+  offsetStorageTopic: connect-offsets
+  statusStorageTopic: connect-status
+  config:
+    config.storage.replication.factor: 1
+    offset.storage.replication.factor: 1
+    status.storage.replication.factor: 1
+    key.converter: org.apache.kafka.connect.json.JsonConverter
+    key.converter.schemas.enable: false
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: false

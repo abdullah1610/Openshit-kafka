@@ -1,0 +1,118 @@
+KAFKA CONNECT DEPLOYMENT - COMPLETE WORK SUMMARY
+=================================================
+
+WORK COMPLETED (Day 1 - April 17, 2026)
+========================================
+
+1. DOCKERFILE FIXES:
+   ✓ Base image: quay.io/strimzi/kafka:0.38.0-kafka-3.6.0
+   ✓ Changed USER root:root to USER root
+   ✓ Added plugins directory: /opt/kafka/plugins/debezium, /opt/kafka/plugins/jdbc
+   ✓ Copied Debezium Oracle connector: debezium-connector-oracle-2.5.0.Final-plugin.tar.gz
+   ✓ Copied JDBC connector: kafka-connect-jdbc-10.6.0.jar
+   ✓ Fixed ownership: chown -R 1001:0 /opt/kafka
+   ✓ Fixed permissions: chmod -R g+rwX /opt/kafka
+   ✓ Added log4j copy: cp /opt/kafka/config/log4j.properties /opt/kafka/custom-config/
+   ✓ Built image: docker.io/shaikhabdullah1610/openshit_poc:latest (and v2 tag)
+   ✓ Pushed to Docker Hub successfully
+
+2. KAFKACONNECT MANIFEST (lakehouse-connector.yaml):
+   ✓ Tried both apiVersion v1 and v1beta2
+   ✓ Set version: 3.6.0 (matched base image)
+   ✓ Set replicas: 1
+   ✓ Set bootstrapServers: my-cluster-kafka-bootstrap.lakehouse-ingest.svc.cluster.local:9092
+   ✓ Set image: docker.io/shaikhabdullah1610/openshit_poc:v2
+   ✓ Added converters: JsonConverter for key and value
+   ✓ Set replication factors: 1
+   ✓ Set topic names: connect-configs, connect-offsets, connect-status
+
+3. ERRORS ENCOUNTERED:
+   ✗ Log4j config not found: /opt/kafka/custom-config/log4j.properties
+   ✗ Bootstrap servers empty in runtime config (showing blank)
+   ✗ Pod CrashLoopBackOff with log4j errors
+   ✗ env vars rejected by Strimzi (spec.env, spec.template.pod.env, spec.template.spec not valid)
+   ✗ Image pull always using old layers despite rebuilds
+
+4. DOCKER HUB IMAGES CREATED:
+   - shaikhabdullah1610/openshit_poc:latest
+   - shaikhabdullah1610/openshit_poc:v2
+   Both contain:
+   - Debezium Oracle connector
+   - JDBC connector
+   - log4j.properties in /opt/kafka/custom-config/
+
+CLEANUP COMMANDS FOR OPENSHIFT
+===============================
+
+Run these to delete everything deployed:
+
+# Delete KafkaConnector
+oc delete kafkaconnector oracle-source-connector -n lakehouse-ingest
+
+# Delete KafkaConnect
+oc delete kafkaconnect lakehouse-connector -n lakehouse-ingest
+
+# Wait for pod to be deleted
+oc get pods -n lakehouse-ingest | findstr lakehouse
+
+# Verify all resources are gone
+oc get kafkaconnect -n lakehouse-ingest
+oc get kafkaconnector -n lakehouse-ingest
+oc get pods -n lakehouse-ingest
+
+FRESH START APPROACH (Next Attempt)
+===================================
+
+Step 1: Check Base Image
+   oc get kafka -n lakehouse-ingest
+   Verify correct Kafka version and bootstrap service names
+
+Step 2: Use Base Image First
+   Test with quay.io/strimzi/kafka:0.38.0-kafka-3.6.0 (no custom plugins)
+   Verify KafkaConnect pod becomes 1/1 Ready
+   If successful, move to Step 3
+
+Step 3: Add Custom Image
+   Build Dockerfile with proper log4j handling
+   Use imagePullPolicy: Always to force fresh pulls
+   Tag with explicit version (not latest)
+   Push to Docker Hub
+
+Step 4: Deploy in Order
+   Apply KafkaConnect manifest
+   Wait for pod to be 1/1 Ready
+   Apply KafkaConnector manifest
+   Verify connector is deployed
+
+Step 5: Test Oracle Connection
+   Check connector logs
+   Verify topics are created
+   Test data flow from Oracle
+
+ROOT CAUSE ANALYSIS
+===================
+
+Main Issues:
+1. Log4j Error Root Cause:
+   - Strimzi sets KAFKA_LOG4J_OPTS=-Dlog4j.configuration=file:/opt/kafka/custom-config/log4j.properties by default
+   - This path needs to exist OR be overridden
+   - Fix: Either copy log4j.properties to custom-config OR change KAFKA_LOG4J_OPTS
+
+2. Bootstrap Servers Empty:
+   - Strimzi generates bootstrap.servers from spec.bootstrapServers
+   - May need explicit bootstrap.servers in spec.config as well
+   - Full DNS name sometimes needed: my-cluster-kafka-bootstrap.lakehouse-ingest.svc.cluster.local:9092
+
+3. Image Pull Caching:
+   - Using :latest tag causes caching issues
+   - Solution: Use explicit version tags and imagePullPolicy: Always
+
+NEXT ATTEMPT CHECKLIST
+======================
+□ Delete all existing resources from OpenShift
+□ Use base image first to verify setup works
+□ Build custom image with explicit version tag
+□ Use imagePullPolicy: Always in manifest
+□ Add bootstrap.servers to BOTH spec.bootstrapServers AND spec.config
+□ Verify log4j.properties path OR override KAFKA_LOG4J_OPTS
+□ Test step by step: base image → custom image → plugins → connectors

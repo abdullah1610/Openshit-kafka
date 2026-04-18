@@ -1,0 +1,72 @@
+# Kafka Connect Oracle Deployment Summary aur AI Prompt
+
+## Summary (Roman Hindi mein)
+
+### Kya hua hai:
+- Humne Kafka Connect ko OpenShift pe deploy kiya hai with Debezium Oracle connector.
+- Dockerfile fix kiya: permissions, log4j config, aur plugins add kiye.
+- Custom image `shaikhabdullah1610/openshit_poc:v3` banaya aur push kiya.
+- OpenShift SCC issues resolve kiye by switching to custom image instead of plugin volumes.
+- Kafka Connect pod ab successfully running hai (image v3 ke saath), aur startup errors khatam ho gaye.
+- Oracle KafkaConnector ab recognize ho raha hai, lekin config validation fail ho raha hai because Oracle DB se connect nahi ho pa raha ("Failed to resolve Oracle database version").
+
+### Kya bacha hai:
+- Oracle connector fully deploy nahi hua. Kafka Connect service ready hai, lekin connector start nahi ho raha due to DB connectivity issue.
+
+### Aapko kya karna hai:
+1. Oracle connectivity check karo: Pod se DB tak network access verify karo (e.g., telnet ya nc command).
+2. Oracle config validate karo: Hostname, port, user, password, database name check karo.
+3. Connector config adjust karo agar zaruri ho.
+4. Logs check karo for more details.
+
+## AI Prompt with Full Details (Issue Solve Karne Ke Liye)
+
+**Prompt for AI Assistant:**
+
+I am deploying Kafka Connect with Debezium Oracle connector on OpenShift using Strimzi operator. The Kafka Connect pod is now running successfully with a custom image (`docker.io/shaikhabdullah1610/openshit_poc:v3`) that includes the Debezium Oracle plugin pre-installed. However, the KafkaConnector for Oracle is failing with the error: "Connector configuration is invalid and contains the following 1 error(s): Unable to connect: Failed to resolve Oracle database version".
+
+### Current Setup:
+- **OpenShift Namespace:** lakehouse-ingest
+- **Kafka Cluster:** my-cluster (Strimzi Kafka 4.1.1)
+- **Kafka Connect CR:** lakehouse-connector (version 4.1.1, image: docker.io/shaikhabdullah1610/openshit_poc:v3)
+- **KafkaConnector:** oracle-source-connector
+  - Class: io.debezium.connector.oracle.OracleConnector
+  - Config:
+    - database.hostname: 192.168.102.25
+    - database.port: 1521
+    - database.user: test
+    - database.password: test
+    - database.dbname: ORCL
+    - database.pdb.name: ORCL
+    - database.server.name: oracle_server
+    - database.history.kafka.bootstrap.servers: my-cluster-kafka-bootstrap.lakehouse-ingest.svc.cluster.local:9092
+    - database.history.kafka.topic: schema-changes.oracle
+    - include.schema.changes: true
+    - database.connection.adapter: logminer
+    - topic.prefix: lakehouse
+  - Tasks Max: 1
+
+### What I've Done So Far:
+- Built custom Kafka Connect image with Debezium Oracle 2.5.0.Final plugin and JDBC driver.
+- Resolved OpenShift SCC issues by embedding plugins in the image instead of using volume mounts.
+- Kafka Connect pod is healthy and REST API is accessible on port 8083.
+- Connector is recognized by Connect (no "class not found" error), but validation fails on DB connection.
+
+### The Issue:
+- Error: "Failed to resolve Oracle database version" during connector config validation.
+- This suggests the connector cannot connect to the Oracle database at 192.168.102.25:1521.
+
+### What I Need Help With:
+- Diagnose why the connector cannot resolve the Oracle database version.
+- Provide steps to verify Oracle connectivity from the Kafka Connect pod.
+- Suggest fixes for common Oracle connectivity issues in OpenShift/Kubernetes environments.
+- If needed, recommend changes to the connector config or Oracle setup.
+- Include commands to test network connectivity, check Oracle listener, and validate credentials.
+
+### Environment Details:
+- OpenShift cluster with restricted SCC.
+- Oracle database is external (not in the cluster).
+- Kafka Connect pod IP: 10.131.0.188 (from recent logs).
+- Use `oc exec` to run commands inside the pod if needed.
+
+Please provide a step-by-step troubleshooting guide and solution to get the Oracle connector working.

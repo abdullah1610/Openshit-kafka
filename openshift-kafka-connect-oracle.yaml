@@ -1,0 +1,49 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaConnect
+metadata:
+  name: lakehouse-connector
+  namespace: lakehouse-ingest
+spec:
+  version: 3.6.0
+  replicas: 1
+  bootstrapServers: my-cluster-kafka-bootstrap.lakehouse-ingest.svc.cluster.local:9092
+  image: docker.io/shaikhabdullah1610/openshit_poc:v2
+  imagePullPolicy: Always
+  groupId: connect-cluster
+  configStorageTopic: connect-configs
+  offsetStorageTopic: connect-offsets
+  statusStorageTopic: connect-status
+  config:
+    bootstrap.servers: my-cluster-kafka-bootstrap.lakehouse-ingest.svc.cluster.local:9092
+    config.storage.replication.factor: 1
+    offset.storage.replication.factor: 1
+    status.storage.replication.factor: 1
+    key.converter: org.apache.kafka.connect.json.JsonConverter
+    key.converter.schemas.enable: false
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: false
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnector
+metadata:
+  name: oracle-source-connector
+  namespace: lakehouse-ingest
+  labels:
+    strimzi.io/cluster: lakehouse-connector
+spec:
+  class: io.debezium.connector.oracle.OracleConnector
+  tasksMax: 1
+  config:
+    database.hostname: "192.168.102.35"
+    database.port: "1521"
+    database.user: "dbzuser"
+    database.password: "dbzuser"
+    database.dbname: "orclpdb1"
+    database.pdb.name: "ORCLPDB1"
+    database.server.name: "oracle_server"
+    database.oracle.version: "19"
+    database.history.kafka.bootstrap.servers: "my-cluster-kafka-bootstrap.lakehouse-ingest.svc.cluster.local:9092"
+    database.history.kafka.topic: "schema-changes.oracle"
+    include.schema.changes: "true"
+    database.connection.adapter: "logminer"
+    topic.prefix: "lakehouse"
