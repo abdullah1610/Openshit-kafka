@@ -3,11 +3,13 @@ kind: KafkaConnect
 metadata:
   name: lakehouse-connector
   namespace: lakehouse-ingest
+  annotations:
+    strimzi.io/use-connector-resources: "true"
 spec:
   version: 3.6.0
   replicas: 1
   bootstrapServers: my-cluster-kafka-bootstrap.lakehouse-ingest.svc.cluster.local:9092
-  image: docker.io/shaikhabdullah1610/openshit_poc:v2
+  image: docker.io/shaikhabdullah1610/openshit_poc:v4
   imagePullPolicy: Always
   groupId: connect-cluster
   configStorageTopic: connect-configs
@@ -23,7 +25,7 @@ spec:
     value.converter: org.apache.kafka.connect.json.JsonConverter
     value.converter.schemas.enable: false
 ---
-apiVersion: kafka.strimzi.io/v1beta2
+apiVersion: kafka.strimzi.io/v1
 kind: KafkaConnector
 metadata:
   name: oracle-source-connector

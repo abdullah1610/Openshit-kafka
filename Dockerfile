@@ -13,7 +13,8 @@ RUN tar -xzf /tmp/debezium-connector-oracle-2.5.0.Final-plugin.tar.gz -C /opt/ka
     rm /tmp/debezium-connector-oracle-2.5.0.Final-plugin.tar.gz
 
 # Download Oracle JDBC driver and place in libs and plugins
-RUN curl -L -o /opt/kafka/libs/ojdbc8.jar https://repo1.maven.org/maven2/com/oracle/database/jdbc/ojdbc8/19.3.0.0/ojdbc8-19.3.0.0.jar && \
+RUN mkdir -p /opt/kafka/libs && \
+    curl -L -o /opt/kafka/libs/ojdbc8.jar https://repo1.maven.org/maven2/com/oracle/database/jdbc/ojdbc8/19.3.0.0/ojdbc8-19.3.0.0.jar && \
     curl -L -o /opt/kafka/libs/orai18n.jar https://repo1.maven.org/maven2/com/oracle/database/nls/orai18n/19.3.0.0/orai18n-19.3.0.0.jar && \
     curl -L -o /opt/kafka/libs/xmlparserv2.jar https://repo1.maven.org/maven2/com/oracle/database/xml/xmlparserv2/19.3.0.0/xmlparserv2-19.3.0.0.jar && \
     cp /opt/kafka/libs/ojdbc8.jar /opt/kafka/plugins/ && \
